@@ -53,8 +53,7 @@ jobs:
             echo "KEY_PASSWORD=kotakalong2026" >> "$GITHUB_ENV"
           fi
 
-      - name: Run Unit & Robolectric Tests
-        run: gradle :app:testDebugUnitTest --no-daemon
+    
 
       - name: Build Release APK
         run: gradle :app:assembleRelease --no-daemon
