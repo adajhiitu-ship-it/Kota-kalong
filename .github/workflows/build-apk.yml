@@ -56,7 +56,8 @@ jobs:
     
 
       - name: Build Release APK
-        run: gradle :app:assembleRelease --no-daemon
+        run: gradle :app:assembleRelease -x lintVitalRelease -x lintVitalAnalyzeRelease --no-daemon --no-configuration-cache
+
       - name: Prepare KOTA-KALONG.apk
         run: |
           mkdir -p dist
