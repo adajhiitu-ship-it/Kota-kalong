@@ -1,0 +1,6 @@
+{
+  "name": "Kota Kalong FT",
+  "description": "Bank soal dan kunci jawaban offline dengan impor PDF, Excel, dan Word serta pencarian 3 tingkat (Exact Match, Similarity TF-IDF, dan Keyword).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
