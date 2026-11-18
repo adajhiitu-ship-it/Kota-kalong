@@ -116,10 +116,10 @@ class OfflineSearchEngine {
         query: String,
         questions: List<QuestionEntity>,
         tierFilter: SearchTier? = null,
-        maxResults: Int = 150
+        maxResults: Int = 20
     ): List<SearchResultItem> {
         val trimmedQuery = query.trim()
-        if (trimmedQuery.isEmpty() || questions.isEmpty()) return emptyList()
+        if (trimmedQuery.length < 3 || questions.isEmpty()) return emptyList()
 
         ensureIndex(questions)
         val docs = cachedIndex
@@ -150,9 +150,15 @@ class OfflineSearchEngine {
 
         // Candidate set for similarity via inverted index
         val simCandidates = HashSet<Int>()
+                val maxDocFreq = (docs.size * 0.4).toInt().coerceAtLeast(50)
         for (term in qTfCounts.keys) {
-            inv[term]?.let { simCandidates.addAll(it) }
-        }
+            inv[term]?.let { postings ->
+                if (postings.size <= maxDocFreq || qTfCounts.size == 1) {
+                    simCandidates.addAll(postings)
+                }
+            }
+         }
+
 
         val results = ArrayList<SearchResultItem>()
 
@@ -180,7 +186,8 @@ class OfflineSearchEngine {
 
             // 2. Similarity Search (TF-IDF Cosine + Jaccard Token Overlap + Char 3-Gram Dice)
             var simScore = 0.0
-            val shouldEvaluateSim = (i in simCandidates) || (queryGrams.size >= 4 && doc.charGrams.isNotEmpty())
+                val shouldEvaluateSim = (i in simCandidates)
+
             if (shouldEvaluateSim && querySimTokens.isNotEmpty()) {
                 val cosine = if (queryNorm > 0.0 && doc.vectorNorm > 0.0) {
                     var dot = 0.0
@@ -205,7 +212,7 @@ class OfflineSearchEngine {
             }
 
             val isSimilarityHit = if (querySimTokens.size >= 2) {
-                simScore >= 0.18
+                simScore >= 0.35
             } else {
                 simScore >= 0.45
             }
