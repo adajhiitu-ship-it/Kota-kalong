@@ -1,0 +1,72 @@
+name: Build KOTA KALONG APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    name: Build Release APK (KOTA-KALONG.apk)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle 9.3.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+
+      - name: Prepare keystores for CI build
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          SECRET_STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          SECRET_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -f debug.keystore.base64 ]; then
+            base64 -d debug.keystore.base64 > debug.keystore
+          fi
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+            echo "KEYSTORE_PATH=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+            echo "STORE_PASSWORD=$SECRET_STORE_PASSWORD" >> "$GITHUB_ENV"
+            echo "KEY_PASSWORD=$SECRET_KEY_PASSWORD" >> "$GITHUB_ENV"
+          else
+            keytool -genkeypair -v \
+              -keystore "$RUNNER_TEMP/upload.jks" \
+              -storetype PKCS12 \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -alias upload \
+              -storepass kotakalong2026 \
+              -keypass kotakalong2026 \
+              -dname "CN=Kota Kalong FT, OU=App, O=KotaKalong, L=ID, ST=ID, C=ID"
+            echo "KEYSTORE_PATH=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+            echo "STORE_PASSWORD=kotakalong2026" >> "$GITHUB_ENV"
+            echo "KEY_PASSWORD=kotakalong2026" >> "$GITHUB_ENV"
+          fi
+
+      - name: Run Unit & Robolectric Tests
+        run: gradle :app:testDebugUnitTest --no-daemon
+
+      - name: Build Release APK
+        run: gradle :app:assembleRelease --no-daemon
+
+      - name: Prepare KOTA-KALONG.apk
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk dist/KOTA-KALONG.apk
+
+      - name: Upload KOTA-KALONG.apk Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KOTA-KALONG-APK
+          path: dist/KOTA-KALONG.apk
+          if-no-files-found: error
